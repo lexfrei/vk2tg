@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -10,16 +11,8 @@ import (
 
 	vkapi "github.com/himidori/golang-vk-api"
 	"github.com/kljensen/snowball/russian"
-	"github.com/spf13/viper"
 	tb "github.com/tucnak/telebot"
 )
-
-type Config struct {
-	VKToken string
-	TGToken string
-}
-
-var c Config
 
 var reSplitter = regexp.MustCompile(`(?m)[^А-Яа-я]`)
 
@@ -36,28 +29,19 @@ var keys = []string{
 	"лейс",
 }
 
-func init() {
-	viper.SetEnvPrefix("v2t")
-	viper.BindEnv("tg_token")
-	viper.BindEnv("vk_token")
-
-	c.TGToken = viper.GetString("tg_token")
-	c.VKToken = viper.GetString("vk_token")
-}
-
 func main() {
 	ticker := time.NewTicker(1 * time.Minute)
 
 	posts := make(chan vkapi.WallPost)
 
-	vkClient, err := vkapi.NewVKClientWithToken(c.VKToken, nil, true)
+	vkClient, err := vkapi.NewVKClientWithToken(os.Getenv("V2T_VK_TOKEN"), nil, true)
 	if err != nil {
 		log.Fatalf("Can't longin to VK: %s\n", err)
 	}
 	log.Printf("Successfully logged to VK\n")
 
 	tgBot, err := tb.NewBot(tb.Settings{
-		Token:  c.TGToken,
+		Token:  os.Getenv("V2T_TG_TOKEN"),
 		Poller: &tb.LongPoller{Timeout: 10 * time.Second},
 	})
 	if err != nil {
@@ -78,7 +62,7 @@ func sendToTG(posts <-chan vkapi.WallPost, bot *tb.Bot) {
 			URL:  "vk.com/write" + strconv.Itoa(p.SignerID),
 		}
 		inlineKeys := [][]tb.InlineButton{
-			[]tb.InlineButton{inlineBtn},
+			{inlineBtn},
 		}
 
 		_, err := bot.Send(&tb.User{ID: 240336636}, p.Text, &tb.ReplyMarkup{
