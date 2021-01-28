@@ -69,9 +69,7 @@ func sendToTG(posts <-chan vkapi.WallPost, bot *tb.Bot) {
 			{inlineBtn1, inlineBtn2},
 		}
 
-		// 240336636
-		// 74194657
-		_, err := bot.Send(&tb.User{ID: 74194657}, p.Text, &tb.ReplyMarkup{
+		_, err := bot.Send(&tb.User{ID: 240336636}, p.Text, &tb.ReplyMarkup{
 			InlineKeyboard: inlineKeys,
 		})
 		if err != nil {
