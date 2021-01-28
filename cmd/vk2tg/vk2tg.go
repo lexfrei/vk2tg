@@ -57,15 +57,21 @@ func main() {
 func sendToTG(posts <-chan vkapi.WallPost, bot *tb.Bot) {
 	for p := range posts {
 
-		inlineBtn := tb.InlineButton{
-			Text: "Написать",
+		inlineBtn1 := tb.InlineButton{
+			Text: "🌎 Оригинал",
+			URL:  "https://vk.com/wall-57692133_" + strconv.Itoa(p.ID),
+		}
+		inlineBtn2 := tb.InlineButton{
+			Text: "✍️ Написать",
 			URL:  "vk.com/write" + strconv.Itoa(p.SignerID),
 		}
 		inlineKeys := [][]tb.InlineButton{
-			{inlineBtn},
+			{inlineBtn1, inlineBtn2},
 		}
 
-		_, err := bot.Send(&tb.User{ID: 240336636}, p.Text, &tb.ReplyMarkup{
+		// 240336636
+		// 74194657
+		_, err := bot.Send(&tb.User{ID: 74194657}, p.Text, &tb.ReplyMarkup{
 			InlineKeyboard: inlineKeys,
 		})
 		if err != nil {
