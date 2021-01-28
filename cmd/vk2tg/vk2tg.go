@@ -77,8 +77,6 @@ func sendToTG(posts <-chan vkapi.WallPost, bot *tb.Bot) {
 		} else {
 			log.Println("Message sent to Andrey")
 		}
-
-		log.Println("Message sent to Andrey")
 	}
 }
 
