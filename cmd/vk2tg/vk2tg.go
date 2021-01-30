@@ -82,25 +82,29 @@ func sendToTG(posts <-chan vkapi.WallPost, bot *tb.Bot, user int) {
 	defer log.Println("Sender: done")
 	for p := range posts {
 
-		inlineBtn1 := tb.InlineButton{
+		toThePost := tb.InlineButton{
 			Text: "🌎 К посту",
 			URL:  "https://vk.com/wall-57692133_" + strconv.Itoa(p.ID),
 		}
-		inlineBtn2 := tb.InlineButton{
+		toMessages := tb.InlineButton{
 			Text: "✍️ Написать",
 			URL:  "vk.com/write" + strconv.Itoa(p.SignerID),
 		}
-		inlineKeys := [][]tb.InlineButton{
-			{inlineBtn1, inlineBtn2},
+		postInlineKeys := [][]tb.InlineButton{
+			{toThePost, toMessages},
 		}
 
 		_, err := bot.Send(&tb.User{ID: user}, p.Text, &tb.ReplyMarkup{
-			InlineKeyboard: inlineKeys,
+			InlineKeyboard: postInlineKeys,
 		})
 		if err != nil {
 			log.Printf("Can't send message: %s\n", err)
 		}
-		log.Printf("Message sent")
+		ch, err := bot.ChatByID(strconv.Itoa(c.TGUser))
+		if err != nil {
+			log.Printf("Error on fetching user info: %s", err)
+		}
+		log.Printf("Message sent to %s", ch.FirstName)
 	}
 }
 
