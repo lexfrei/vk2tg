@@ -1,7 +1,7 @@
 version: 2
 updates:
 - package-ecosystem: docker
-  directory: "/build/exporter"
+  directory: "/build/vk2tg"
   schedule:
     interval: daily
     time: "02:00"
