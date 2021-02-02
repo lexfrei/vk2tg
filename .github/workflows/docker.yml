@@ -36,7 +36,7 @@ jobs:
       with:
         context: .
         file: ./build/vk2tg/Dockerfile
-        platforms: linux/amd64
+        platforms: linux/amd64,linux/arm64
         push: true
         tags: ${{ steps.docker_meta.outputs.tags }}
 
@@ -46,6 +46,6 @@ jobs:
       with:
         context: .
         file: ./build/exporter/Dockerfile
-        platforms: linux/amd64
+        platforms: linux/amd64,linux/arm64
         tags: ${{ steps.docker_meta.outputs.tags }}
 

@@ -5,11 +5,15 @@ WORKDIR /go/src/github.com/lexfrei/vk2tg/
 
 RUN go get ./... && CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-s -w" ./cmd/vk2tg/vk2tg.go 
 
-RUN apk add --update --no-cache upx && upx --best --lzma vk2tg
+FROM harshavardhanj/upx:3.95-scratch AS zip
+
+COPY --from=build /go/src/github.com/lexfrei/vk2tg/vk2tg /
+
+RUN upx --best --lzma vk2tg
 
 FROM scratch
 
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=build /go/src/github.com/lexfrei/vk2tg/vk2tg /
+COPY --from=zip /vk2tg /
 
 ENTRYPOINT ["/vk2tg"]
