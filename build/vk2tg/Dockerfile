@@ -5,11 +5,11 @@ WORKDIR /go/src/github.com/lexfrei/vk2tg/
 
 RUN go get ./... && CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-s -w" ./cmd/vk2tg/vk2tg.go 
 
-FROM harshavardhanj/upx:3.95-scratch AS zip
+FROM harshavardhanj/upx:3.95 AS zip
 
 COPY --from=build /go/src/github.com/lexfrei/vk2tg/vk2tg /
 
-RUN upx --best --lzma vk2tg
+RUN upx --best --lzma /vk2tg
 
 FROM scratch
 
