@@ -1,12 +1,15 @@
 FROM golang:latest AS build
 
 COPY ./ /go/src/github.com/lexfrei/vk2tg/
-WORKDIR /go/src/github.com/lexfrei/vk2tg/cmd/vk2tg
+WORKDIR /go/src/github.com/lexfrei/vk2tg/
 
-RUN go get ./... && CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-s -w" -o vk2tg
+RUN go get ./... && CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-s -w" ./cmd/vk2tg/vk2tg.go 
 
-FROM alpine:3.13.0
+RUN apt update && apt install -y upx-ucl && upx --best --lzma vk2tg
 
-COPY --from=build /go/src/github.com/lexfrei/vk2tg/cmd/vk2tg/vk2tg /
+FROM scratch
+
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=build /go/src/github.com/lexfrei/vk2tg/vk2tg /
 
 ENTRYPOINT ["/vk2tg"]

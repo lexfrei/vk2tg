@@ -1,0 +1,8 @@
+github.com/himidori/golang-vk-api v0.0.0-20201107095920-dbf6a2cc961d h1:cyBV68M8gsCVacHwKtcfPXqD3j9pucNl/N50Smfy6C4=
+github.com/himidori/golang-vk-api v0.0.0-20201107095920-dbf6a2cc961d/go.mod h1:Pr+ceG3dOm/e84EMeT9PBDjQ0keC9ZQP/wSrrZawMV0=
+github.com/mitchellh/hashstructure v1.1.0 h1:P6P1hdjqAAknpY/M1CGipelZgp+4y9ja9kmUZPXP+H0=
+github.com/mitchellh/hashstructure v1.1.0/go.mod h1:xUDAozZz0Wmdiufv0uyhnHkUTN6/6d8ulp4AwfLKrmA=
+github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
+github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
+github.com/tucnak/telebot v2.0.0+incompatible h1:Amnb+h23aEnfKSDqFKU/R1qGSGgnS78Hm56lLVVQL2A=
+github.com/tucnak/telebot v2.0.0+incompatible/go.mod h1:TCLoYDyssqVcjhkdyYu+He6eldK40im537vXoex2LM0=

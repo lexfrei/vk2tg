@@ -17,27 +17,41 @@ type conf struct {
 	TGToken string
 	VKToken string
 	TGUser  int
+	Period  time.Duration
+	Paused  bool
+	WG      *sync.WaitGroup
+	Silent  bool
+}
+
+type stat struct {
+	LastPost   vkapi.WallPost
+	LastUpdate time.Time
+	StartTime  time.Time
 }
 
 var c conf
-var wg = &sync.WaitGroup{}
-var last vkapi.WallPost
-var lastUpdate time.Time
-var startTime time.Time
+var st stat
 
 func init() {
 	var err error
+
+	c.Period = time.Minute
+	c.Paused = false
+	c.WG = &sync.WaitGroup{}
+	c.Silent = false
+
+	st.StartTime = time.Now()
+
 	c.TGToken = os.Getenv("V2T_TG_TOKEN")
 	c.VKToken = os.Getenv("V2T_VK_TOKEN")
 	c.TGUser, err = strconv.Atoi(os.Getenv("V2T_TG_USER"))
 	if err != nil {
 		log.Fatalln("Invalid TG user ID: " + os.Getenv("V2T_TG_USER"))
 	}
-	startTime = time.Now()
 }
 
 func main() {
-	ticker := time.NewTicker(1 * time.Minute)
+	ticker := time.NewTicker(c.Period)
 
 	posts := make(chan vkapi.WallPost)
 
@@ -57,46 +71,100 @@ func main() {
 	log.Printf("Successfully logged to TG as %s\n", tgBot.Me.Username)
 
 	tgBot.Handle("/status", func(m *tb.Message) {
-		msg := fmt.Sprintf("I'm fine\nLast post date:\t%s\nRecived in:\t%s\nUptime:\t%s",
-			time.Unix(last.Date, 0).In(time.FixedZone("UTC+3", 3*60*60)).Format(time.RFC822),
-			lastUpdate.In(time.FixedZone("UTC+3", 3*60*60)).Format(time.RFC822),
-			time.Since(startTime).Round(time.Second),
+		msg := fmt.Sprintf("I'm fine\nLast post date:\t%s\nRecived in:\t%s\nUptime:\t%s\nPaused:\t%t\nSound:\t%t",
+			time.Unix(st.LastPost.Date, 0).In(time.FixedZone("UTC+3", 3*60*60)).Format(time.RFC822),
+			st.LastUpdate.In(time.FixedZone("UTC+3", 3*60*60)).Format(time.RFC822),
+			time.Since(st.StartTime).Round(time.Second),
+			c.Paused,
+			!c.Silent,
 		)
 		_, err = tgBot.Send(m.Sender, msg)
 		if err != nil {
 			log.Printf("Error on sending status: %s", err)
 		}
+	})
 
+	tgBot.Handle("/pause", func(m *tb.Message) {
+		ch, err := tgBot.ChatByID(strconv.Itoa(c.TGUser))
+		if err != nil {
+			log.Printf("Error on fetching user info: %s", err)
+		}
+		c.Paused = !c.Paused
+		if c.Paused {
+			defer log.Printf("Paused by user: %s", ch.FirstName)
+			ticker.Stop()
+			_, err = tgBot.Send(m.Sender, "Paused! Send /pause to continue")
+			if err != nil {
+				log.Printf("Error on sending status: %s", err)
+			}
+		} else {
+			defer log.Printf("Unpaused by user: %s", ch.FirstName)
+			ticker.Reset(c.Period)
+			_, err = tgBot.Send(m.Sender, "Unpaused! Send /pause to stop")
+			if err != nil {
+				log.Printf("Error on sending status: %s", err)
+			}
+		}
+	})
+
+	tgBot.Handle("/mute", func(m *tb.Message) {
+		ch, err := tgBot.ChatByID(strconv.Itoa(c.TGUser))
+		if err != nil {
+			log.Printf("Error on fetching user info: %s", err)
+		}
+		c.Silent = !c.Silent
+		if c.Silent {
+			defer log.Printf("Muted by user: %s", ch.FirstName)
+			ticker.Stop()
+			_, err = tgBot.Send(m.Sender, "Muted! Send /mute to go loud")
+			if err != nil {
+				log.Printf("Error on sending status: %s", err)
+			}
+		} else {
+			defer log.Printf("Unmuted by user: %s", ch.FirstName)
+			ticker.Reset(c.Period)
+			_, err = tgBot.Send(m.Sender, "Unmuted! Send /mute to go silent")
+			if err != nil {
+				log.Printf("Error on sending status: %s", err)
+			}
+		}
 	})
 
 	go tgBot.Start()
-	go sendToTG(posts, tgBot, c.TGUser)
+	go sendPostToTG(posts, tgBot, c.TGUser)
 	go watchNewPosts(ticker.C, posts, vkClient)
 
-	wg.Add(2)
-	wg.Wait()
+	c.WG.Add(2)
+	c.WG.Wait()
 }
 
-func sendToTG(posts <-chan vkapi.WallPost, bot *tb.Bot, user int) {
-	defer wg.Done()
+func sendPostToTG(posts <-chan vkapi.WallPost, bot *tb.Bot, user int) {
+	defer c.WG.Done()
 	defer log.Println("Sender: done")
 	for p := range posts {
+		_, err := bot.Send(
+			&tb.User{ID: user},
+			p.Text,
 
-		toThePost := tb.InlineButton{
-			Text: "🌎 К посту",
-			URL:  "https://vk.com/wall-57692133_" + strconv.Itoa(p.ID),
-		}
-		toMessages := tb.InlineButton{
-			Text: "✍️ Написать",
-			URL:  "vk.com/write" + strconv.Itoa(p.SignerID),
-		}
-		postInlineKeys := [][]tb.InlineButton{
-			{toThePost, toMessages},
-		}
-
-		_, err := bot.Send(&tb.User{ID: user}, p.Text, &tb.ReplyMarkup{
-			InlineKeyboard: postInlineKeys,
-		})
+			&tb.SendOptions{
+				ReplyTo: &tb.Message{},
+				ReplyMarkup: &tb.ReplyMarkup{
+					InlineKeyboard: [][]tb.InlineButton{
+						{
+							tb.InlineButton{
+								Text: "🌎 К посту",
+								URL:  "https://vk.com/wall-57692133_" + strconv.Itoa(p.ID),
+							},
+							tb.InlineButton{
+								Text: "✍️ Написать",
+								URL:  "vk.com/write" + strconv.Itoa(p.SignerID),
+							},
+						},
+					},
+				},
+				DisableNotification: c.Silent,
+			},
+		)
 		if err != nil {
 			log.Printf("Can't send message: %s\n", err)
 		}
@@ -109,17 +177,18 @@ func sendToTG(posts <-chan vkapi.WallPost, bot *tb.Bot, user int) {
 }
 
 func watchNewPosts(tick <-chan time.Time, posts chan<- vkapi.WallPost, client *vkapi.VKClient) {
-	defer wg.Done()
+	defer c.WG.Done()
 	defer log.Println("Fetcher: done")
 	for range tick {
-		lastUpdate = time.Now()
+		st.LastUpdate = time.Now()
 		log.Println("Fetching new posts")
 		w, err := client.WallGet("cosplay_second", 10, nil)
 		if err != nil {
-			log.Fatalln(err)
+			log.Printf("failed to fetch posts: %s", err)
+			continue
 		}
 
-		if w.Posts[0].ID == last.ID {
+		if w.Posts[0].ID == st.LastPost.ID {
 			log.Printf("No new posts found")
 			continue
 		}
@@ -127,12 +196,12 @@ func watchNewPosts(tick <-chan time.Time, posts chan<- vkapi.WallPost, client *v
 		for i := len(w.Posts) - 1; i >= 0; i-- {
 			log.Printf("Post %d: Processing", w.Posts[i].ID)
 
-			if last.ID > w.Posts[i].ID {
+			if st.LastPost.ID > w.Posts[i].ID {
 				log.Printf("Post %d: Not a new post, skipped", w.Posts[i].ID)
 				continue
 			} else {
 				log.Printf("Post %d: Selected as latest", w.Posts[i].ID)
-				last = *w.Posts[i]
+				st.LastPost = *w.Posts[i]
 			}
 
 			if !strings.Contains(w.Posts[i].Text, "#поиск") {
