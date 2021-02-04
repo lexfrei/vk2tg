@@ -35,7 +35,7 @@ var st stat
 func init() {
 	var err error
 
-	c.Period = time.Minute
+	c.Period = 60 * time.Second
 	c.Paused = false
 	c.WG = &sync.WaitGroup{}
 	c.Silent = false
@@ -142,9 +142,30 @@ func sendPostToTG(posts <-chan vkapi.WallPost, bot *tb.Bot, user int) {
 	defer c.WG.Done()
 	defer log.Println("Sender: done")
 	for p := range posts {
+		var album tb.Album
 		for _, a := range p.Attachments {
-			log.Println(a.Photo)
+			if a.Type == "photo" {
+				var maxSize int
+				var url string
+				for _, size := range a.Photo.Sizes {
+					if maxSize < size.Width*size.Height {
+						maxSize = size.Width * size.Height
+						url = size.Url
+					}
+				}
+				album = append(album, &tb.Photo{
+					File: tb.FromURL(url),
+				})
+			}
 		}
+
+		if len(album) > 0 {
+			_, err := bot.SendAlbum(&tb.User{ID: user}, album)
+			if err != nil {
+				log.Printf("Can't send album: %s\n", err)
+			}
+		}
+
 		_, err := bot.Send(
 			&tb.User{ID: user},
 			p.Text,
