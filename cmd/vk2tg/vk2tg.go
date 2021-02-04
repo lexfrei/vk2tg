@@ -143,7 +143,7 @@ func sendPostToTG(posts <-chan vkapi.WallPost, bot *tb.Bot, user int) {
 	defer log.Println("Sender: done")
 	for p := range posts {
 		for _, a := range p.Attachments {
-			log.Println(a.Photo.Photo604)
+			log.Println(a.Photo)
 		}
 		_, err := bot.Send(
 			&tb.User{ID: user},
