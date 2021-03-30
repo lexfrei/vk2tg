@@ -100,7 +100,7 @@ func (c *VTClinent) Start() error {
 		}
 	})
 
-	c.tgClient.Start()
+	go c.tgClient.Start()
 	c.WG.Add(2)
 	go c.VKWatcher()
 	go c.TGSender()
