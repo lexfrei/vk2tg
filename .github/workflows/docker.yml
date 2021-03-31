@@ -12,7 +12,9 @@ jobs:
       uses: crazy-max/ghaction-docker-meta@v2.1.0
       with:
         images: ghcr.io/lexfrei/vk2tg/vk2tg
-        tag-sha: true
+        tags: |
+          type=sha
+          type=ref,event=branch
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
