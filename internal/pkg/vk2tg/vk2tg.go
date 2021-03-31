@@ -104,10 +104,16 @@ func (c *VTClinent) Start() error {
 		func(m *tb.Message) {
 			if !c.Paused {
 				c.Pause()
-				c.tgClient.Send(m.Sender, "Paused! Send /pause to continue")
+				_, err = c.tgClient.Send(m.Sender, "Paused! Send /pause to continue")
+				if err != nil {
+					c.logger.Printf("Error on sending message: %s", err)
+				}
 			} else {
 				c.Resume()
-				c.tgClient.Send(m.Sender, "Unpaused! Send /pause to stop")
+				_, err = c.tgClient.Send(m.Sender, "Unpaused! Send /pause to stop")
+				if err != nil {
+					c.logger.Printf("Error on sending message: %s", err)
+				}
 			}
 		})
 
@@ -115,10 +121,16 @@ func (c *VTClinent) Start() error {
 		func(m *tb.Message) {
 			if !c.Silent {
 				c.Mute()
-				c.tgClient.Send(m.Sender, "Muted! Send /mute to go loud")
+				_, err = c.tgClient.Send(m.Sender, "Muted! Send /mute to go loud")
+				if err != nil {
+					c.logger.Printf("Error on sending message: %s", err)
+				}
 			} else {
 				c.Unmute()
-				c.tgClient.Send(m.Sender, "Unmuted! Send /mute to go silent")
+				_, err = c.tgClient.Send(m.Sender, "Unmuted! Send /mute to go silent")
+				if err != nil {
+					c.logger.Printf("Error on sending message: %s", err)
+				}
 			}
 		})
 
