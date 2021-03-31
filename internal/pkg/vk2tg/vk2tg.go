@@ -15,9 +15,8 @@ import (
 )
 
 // Moscow
-const offset int = 10800
-
-var zone = time.FixedZone("UTC+3", offset)
+//nolint:gomnd
+var zone = time.FixedZone("UTC+3", 3*60*60)
 
 type VTClinent struct {
 	tgUser       int
