@@ -56,17 +56,7 @@ func NewVTClient(tgToken, vkToken string, tgRecepient int, period time.Duration)
 
 //nolint:lll
 func NewVTClientWithLogger(tgToken, vkToken string, tgRecepient int, period time.Duration, logger *log.Logger) *VTClinent {
-	c := new(VTClinent)
-	c.tgToken = tgToken
-	c.vkToken = vkToken
-	c.tgUser = tgRecepient
-	c.chVKPosts = make(chan *vkapi.WallPost)
-	c.WG = &sync.WaitGroup{}
-	c.Silent = false
-	c.Paused = false
-	c.StartTime = time.Now()
-	c.Period = period
-	c.ticker = time.NewTicker(period)
+	c := NewVTClient(tgToken, vkToken, tgRecepient, period)
 	c.logger = logger
 	return c
 }
