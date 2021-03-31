@@ -15,7 +15,9 @@ import (
 )
 
 // Moscow
-var zone = time.FixedZone("UTC+3", 3*60*60)
+const offset int = 10800
+
+var zone = time.FixedZone("UTC+3", offset)
 
 type VTClinent struct {
 	tgUser       int
@@ -52,6 +54,7 @@ func NewVTClient(tgToken, vkToken string, tgRecepient int, period time.Duration)
 	return c
 }
 
+//nolint:lll
 func NewVTClientWithLogger(tgToken, vkToken string, tgRecepient int, period time.Duration, logger *log.Logger) *VTClinent {
 	c := new(VTClinent)
 	c.tgToken = tgToken
@@ -120,6 +123,7 @@ func (c *VTClinent) Start() error {
 		})
 
 	go c.tgClient.Start()
+	//nolint:gomnd
 	c.WG.Add(2)
 	go c.VKWatcher()
 	go c.TGSender()
