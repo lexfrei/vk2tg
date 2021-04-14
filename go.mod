@@ -6,5 +6,5 @@ require (
 	github.com/himidori/golang-vk-api v0.0.0-20210404104913-eff438684eb7
 	github.com/mitchellh/hashstructure v1.1.0 // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/tucnak/telebot v2.0.0+incompatible
+	github.com/tucnak/telebot v2.3.5+incompatible
 )
