@@ -11,7 +11,7 @@ import (
 
 	vkapi "github.com/himidori/golang-vk-api"
 	"github.com/pkg/errors"
-	tb "github.com/tucnak/telebot"
+	tb "gopkg.in/tucnak/telebot.v2"
 )
 
 // Moscow
