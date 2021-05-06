@@ -5,7 +5,8 @@ WORKDIR /go/src/github.com/lexfrei/vk2tg/
 
 RUN go get ./... && CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-s -w" ./cmd/vk2tg/vk2tg.go 
 
-RUN apk add --update --no-cache upx && upx --best --lzma vk2tg
+# Disabled for arm compactability
+# RUN apk add --update --no-cache upx && upx --best --lzma vk2tg
 
 FROM scratch
 
