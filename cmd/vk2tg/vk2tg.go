@@ -19,14 +19,16 @@ func main() {
 		logger.Fatalln("Invalid TG user ID: " + os.Getenv("V2T_TG_USER"))
 	}
 
-	vtClient := vt.NewVTClientWithLogger(
+	vtClient := vt.NewVTClient(
 		os.Getenv("V2T_TG_TOKEN"),
 		os.Getenv("V2T_VK_TOKEN"),
 		user,
-		period,
-		logger,
-	)
+		period).WithLogger(logger).WithConfig("config.yaml")
 
+	err = vtClient.LoadConfig()
+	if err != nil {
+		logger.Fatalln(err)
+	}
 	err = vtClient.Start()
 	if err != nil {
 		logger.Fatalln(err)

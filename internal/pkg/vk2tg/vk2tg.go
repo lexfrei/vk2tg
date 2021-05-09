@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -12,6 +13,7 @@ import (
 	vkapi "github.com/himidori/golang-vk-api"
 	"github.com/pkg/errors"
 	tb "gopkg.in/tucnak/telebot.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // Moscow
@@ -19,44 +21,53 @@ import (
 var zone = time.FixedZone("UTC+3", 3*60*60)
 
 type VTClinent struct {
-	tgUser       int
-	Paused       bool
-	Silent       bool
-	tgToken      string
-	vkToken      string
-	Period       time.Duration
-	tgClient     *tb.Bot
-	vkClient     *vkapi.VKClient
-	LastPostID   int
-	LastPostDate int64
-	LastUpdate   time.Time
-	StartTime    time.Time
-	WG           *sync.WaitGroup
-	ticker       *time.Ticker
-	chVKPosts    chan *vkapi.WallPost
-	logger       *log.Logger
+	config     *config
+	tgClient   *tb.Bot
+	vkClient   *vkapi.VKClient
+	LastUpdate time.Time
+	StartTime  time.Time
+	WG         *sync.WaitGroup
+	ticker     *time.Ticker
+	chVKPosts  chan *vkapi.WallPost
+	logger     *log.Logger
+	stateFile  string
+}
+
+type config struct {
+	TGUser       int           `yaml:"TGUser"`
+	Paused       bool          `yaml:"Paused"`
+	Silent       bool          `yaml:"Silent"`
+	TGToken      string        `yaml:"TGToken"`
+	VKToken      string        `yaml:"VKToken"`
+	Period       time.Duration `yaml:"Period"`
+	LastPostID   int           `yaml:"LastPostID"`
+	LastPostDate int64         `yaml:"LastPostDate"`
 }
 
 func NewVTClient(tgToken, vkToken string, tgRecepient int, period time.Duration) *VTClinent {
 	c := new(VTClinent)
-	c.tgToken = tgToken
-	c.vkToken = vkToken
-	c.tgUser = tgRecepient
+	c.config = new(config)
+	c.config.TGToken = tgToken
+	c.config.VKToken = vkToken
+	c.config.TGUser = tgRecepient
 	c.chVKPosts = make(chan *vkapi.WallPost)
 	c.WG = &sync.WaitGroup{}
-	c.Silent = false
-	c.Paused = false
+	c.config.Silent = false
+	c.config.Paused = false
 	c.StartTime = time.Now()
-	c.Period = period
+	c.config.Period = period
 	c.ticker = time.NewTicker(period)
 	c.logger = log.New(ioutil.Discard, "vk2tg: ", log.Ldate|log.Ltime|log.Lshortfile)
 	return c
 }
 
-//nolint:lll
-func NewVTClientWithLogger(tgToken, vkToken string, tgRecepient int, period time.Duration, logger *log.Logger) *VTClinent {
-	c := NewVTClient(tgToken, vkToken, tgRecepient, period)
+func (c *VTClinent) WithLogger(logger *log.Logger) *VTClinent {
 	c.logger = logger
+	return c
+}
+
+func (c *VTClinent) WithConfig(path string) *VTClinent {
+	c.stateFile = path
 	return c
 }
 
@@ -64,13 +75,13 @@ func (c *VTClinent) Start() error {
 	c.logger.Println("Starting...")
 	var err error
 
-	c.vkClient, err = vkapi.NewVKClientWithToken(c.vkToken, nil, true)
+	c.vkClient, err = vkapi.NewVKClientWithToken(c.config.VKToken, nil, true)
 	if err != nil {
 		return errors.Wrap(err, "Can't longin to VK")
 	}
 
 	c.tgClient, err = tb.NewBot(tb.Settings{
-		Token:  c.tgToken,
+		Token:  c.config.TGToken,
 		Poller: &tb.LongPoller{Timeout: 10 * time.Second},
 	})
 	if err != nil {
@@ -80,18 +91,18 @@ func (c *VTClinent) Start() error {
 	c.tgClient.Handle("/status",
 		func(m *tb.Message) {
 			msg := fmt.Sprintf("I'm fine\nLast post date:\t%s\nReceived in:\t%s\nUptime:\t%s\nPaused:\t%t\nSound:\t%t",
-				time.Unix(c.LastPostDate, 0).In(zone).Format(time.RFC822),
+				time.Unix(c.config.LastPostDate, 0).In(zone).Format(time.RFC822),
 				c.LastUpdate.In(zone).Format(time.RFC822),
 				time.Since(c.StartTime).Round(time.Second),
-				c.Paused,
-				!c.Silent,
+				c.config.Paused,
+				!c.config.Silent,
 			)
 			c.sendMessage(m.Sender, msg)
 		})
 
 	c.tgClient.Handle("/pause",
 		func(m *tb.Message) {
-			if !c.Paused {
+			if !c.config.Paused {
 				c.Pause()
 				c.sendMessage(m.Sender, "Paused! Send /pause to continue")
 			} else {
@@ -102,7 +113,7 @@ func (c *VTClinent) Start() error {
 
 	c.tgClient.Handle("/mute",
 		func(m *tb.Message) {
-			if !c.Silent {
+			if !c.config.Silent {
 				c.Mute()
 				c.sendMessage(m.Sender, "Muted! Send /mute to go loud")
 			} else {
@@ -123,21 +134,21 @@ func (c *VTClinent) Start() error {
 func (c *VTClinent) Pause() {
 	c.logger.Println("Watcher paused")
 	c.ticker.Stop()
-	c.Paused = true
+	c.config.Paused = true
 }
 
 func (c *VTClinent) Resume() {
 	c.logger.Println("Watcher unpaused")
-	c.ticker.Reset(c.Period)
-	c.Paused = false
+	c.ticker.Reset(c.config.Period)
+	c.config.Paused = false
 }
 
 func (c *VTClinent) Mute() {
-	c.Silent = true
+	c.config.Silent = true
 }
 
 func (c *VTClinent) Unmute() {
-	c.Silent = false
+	c.config.Silent = false
 }
 
 func (c *VTClinent) Wait() {
@@ -155,7 +166,7 @@ func (c *VTClinent) VKWatcher() {
 			continue
 		}
 
-		if w.Posts[0].ID == c.LastPostID {
+		if w.Posts[0].ID == c.config.LastPostID {
 			c.logger.Printf("No new posts found")
 			continue
 		}
@@ -163,13 +174,14 @@ func (c *VTClinent) VKWatcher() {
 		for i := len(w.Posts) - 1; i >= 0; i-- {
 			c.logger.Printf("Post %d: Processing", w.Posts[i].ID)
 
-			if c.LastPostID > w.Posts[i].ID {
+			if c.config.LastPostID > w.Posts[i].ID {
 				c.logger.Printf("Post %d: Not a new post, skipped", w.Posts[i].ID)
 				continue
 			} else {
 				c.logger.Printf("Post %d: Selected as latest", w.Posts[i].ID)
-				c.LastPostDate = w.Posts[i].Date
-				c.LastPostID = w.Posts[i].ID
+				c.config.LastPostDate = w.Posts[i].Date
+				c.config.LastPostID = w.Posts[i].ID
+				fmt.Println(c.SaveConfig())
 			}
 
 			if !strings.Contains(w.Posts[i].Text, "#поиск") {
@@ -205,14 +217,14 @@ func (c *VTClinent) TGSender() {
 		}
 
 		if len(album) > 0 {
-			_, err := c.tgClient.SendAlbum(&tb.User{ID: c.tgUser}, album)
+			_, err := c.tgClient.SendAlbum(&tb.User{ID: c.config.TGUser}, album)
 			if err != nil {
 				c.logger.Printf("Can't send album: %s\n", err)
 			}
 		}
 
 		_, err := c.tgClient.Send(
-			&tb.User{ID: c.tgUser},
+			&tb.User{ID: c.config.TGUser},
 			p.Text,
 			&tb.SendOptions{
 				ReplyTo: &tb.Message{},
@@ -230,13 +242,13 @@ func (c *VTClinent) TGSender() {
 						},
 					},
 				},
-				DisableNotification: c.Silent,
+				DisableNotification: c.config.Silent,
 			},
 		)
 		if err != nil {
 			c.logger.Printf("Can't send message: %s\n", err)
 		}
-		ch, err := c.tgClient.ChatByID(strconv.Itoa(c.tgUser))
+		ch, err := c.tgClient.ChatByID(strconv.Itoa(c.config.TGUser))
 		if err != nil {
 			c.logger.Printf("Error on fetching user info: %s", err)
 		}
@@ -249,4 +261,30 @@ func (c *VTClinent) sendMessage(u *tb.User, str string) {
 	if err != nil {
 		c.logger.Printf("Error on sending message: %s", err)
 	}
+}
+
+func (c *VTClinent) LoadConfig() error {
+	_, err := os.Stat(c.stateFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return errors.Wrap(err, "Can't load config file:")
+	}
+
+	rawConfig, err := ioutil.ReadFile(c.stateFile)
+	if err != nil {
+		return errors.Wrap(err, "Can't read config file:")
+	}
+
+	return yaml.Unmarshal(rawConfig, c.config)
+}
+
+func (c *VTClinent) SaveConfig() error {
+	b, err := yaml.Marshal(c.config)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return ioutil.WriteFile(c.stateFile, b, 0600)
 }
