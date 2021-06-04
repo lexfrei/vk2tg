@@ -1,4 +1,4 @@
-FROM golang:1.16.4 AS build
+FROM golang:1.16.5 AS build
 
 COPY ./ /go/src/github.com/lexfrei/vk2tg/
 WORKDIR /go/src/github.com/lexfrei/vk2tg/
