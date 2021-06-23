@@ -7,7 +7,7 @@
         "before 2am"
     ],
     "timezone": "Europe/Moscow",
-    "dependencyDashboard": true,
+    "dependencyDashboard": false,
     "packageRules": [{
             "managers": ["gomod"],
             "updateTypes": ["major"],
