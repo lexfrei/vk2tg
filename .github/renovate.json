@@ -1,0 +1,41 @@
+{
+    "extends": [":pinDependencies"],
+    "major": {
+        "stabilityDays": 3
+    },
+    "schedule": [
+        "before 2am"
+    ],
+    "timezone": "Europe/Moscow",
+    "packageRules": [{
+            "managers": ["gomod"],
+            "packagePatterns": [".*"],
+            "updateTypes": ["major"],
+            "postUpdateOptions": [
+                "gomodTidy",
+                "gomodUpdateImportPaths"
+            ],
+            "labels": ["go-major-update"]
+        },
+        {
+            "managers": ["gomod"],
+            "packagePatterns": [".*"],
+            "updateTypes": ["minor", "patch", "pin", "digest"],
+            "automerge": true,
+            "postUpdateOptions": [
+                "gomodTidy",
+                "gomodUpdateImportPaths"
+            ],
+            "labels": ["go-minor-update"]
+        },
+        {
+            "matchDatasources": ["docker"],
+            "pinDigests": true,
+            "labels": ["docker-update"],
+            "automerge": true
+        }
+    ],
+    "github-actions": {
+        "enabled": true
+    }
+}
