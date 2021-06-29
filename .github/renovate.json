@@ -32,7 +32,8 @@
             "automerge": true
         }, {
             "matchDatasources": ["github-actions", "actions"],
-            "automerge": true
+            "automerge": true,
+            "labels": ["actions-update"]
         }
     ]
 }
